@@ -1,0 +1,115 @@
+/********************************
+ * Libraries included
+ *******************************/
+#include <ESP8266WiFi.h>
+
+/********************************
+ * Constants and objects
+ *******************************/
+
+const char* SSID_NAME = "judith"; // Put here your SSID name
+const char* SSID_PASS = "1433miaa"; // Put here your password
+const char* TOKEN = "A1E-u3jJOqxyOMbKngqjYQzHDFrluPZIl6"; // Put here your TOKEN
+const char* DEVICE_LABEL = "wemos-d1"; // Your device label
+const char* VARIABLE_LABEL = "temperature"; // Your variable label
+const char* USER_AGENT = "ESP8266";
+const char* VERSION = "1.0";
+const char* HTTPSERVER = "things.ubidots.com";
+int HTTPPORT = 80;
+
+WiFiClient clientUbi;
+
+/********************************
+ * Auxiliar Functions
+ *******************************/
+/**
+ * Gets the length of the body
+ * @arg variable the body of type char
+ * @return dataLen the length of the variable
+ */
+int dataLen(char* variable) {
+  uint8_t dataLen = 0;
+  for (int i = 0; i <= 250; i++) {
+    if (variable[i] != '\0') {
+      dataLen++;
+    } else {
+      break;
+    }
+  }
+  return dataLen;
+}
+
+/********************************
+ * Main Functions
+ *******************************/
+
+void setup() {
+  Serial.begin(115200);
+  
+  /* Connects to AP */
+  WiFi.begin(SSID_NAME, SSID_PASS);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    }
+
+  WiFi.setAutoReconnect(true);
+  Serial.println(F("WiFi connected"));
+  Serial.println(F("IP address: "));
+  Serial.println(WiFi.localIP());
+
+}
+
+void loop() {
+
+  char* body = (char *) malloc(sizeof(char) * 150);
+  char* data = (char *) malloc(sizeof(char) * 300);
+  /* Space to store values to send */
+  char str_val[10];
+
+  /* Read the sensor from the analog input*/
+  float sensor_value = analogRead(A0);
+
+  /*---- Transforms the values of the sensors to char type -----*/
+  /* 4 is mininum width, 2 is precision; float value is copied onto str_val*/
+  dtostrf(sensor_value, 4, 2, str_val);
+
+  /* Builds the body to be send into the request*/ 
+  sprintf(body, "{\"%s\":%s}", VARIABLE_LABEL, str_val);
+  
+  /* Builds the HTTP request to be POST */
+  sprintf(data, "POST /api/v1.6/devices/%s", DEVICE_LABEL);
+  sprintf(data, "%s HTTP/1.1\r\n", data);
+  sprintf(data, "%sHost: things.ubidots.com\r\n", data);
+  sprintf(data, "%sUser-Agent: %s/%s\r\n", data, USER_AGENT, VERSION);
+  sprintf(data, "%sX-Auth-Token: %s\r\n", data, TOKEN);
+  sprintf(data, "%sConnection: close\r\n", data);
+  sprintf(data, "%sContent-Type: application/json\r\n", data);
+  sprintf(data, "%sContent-Length: %d\r\n\r\n", data, dataLen(body));
+  sprintf(data, "%s%s\r\n\r\n", data, body);
+
+  /* Initial connection */
+  clientUbi.connect(HTTPSERVER, HTTPPORT);
+
+  /* Verify the client connection */
+  if (clientUbi.connect(HTTPSERVER, HTTPPORT)) {
+        Serial.println(F("Posting your variables: "));
+        Serial.println(data);
+        /* Send the HTTP Request */
+        clientUbi.print(data);
+  }
+
+  /* While the client is available read the response of the server */
+  while (clientUbi.available()) {
+        char c = clientUbi.read();
+        Serial.write(c);
+  }
+   /* Free memory */
+  free(data);
+  free(body);
+  /* Stop the client */
+  clientUbi.stop();
+  /* Five second delay */
+  delay(5000);
+}
