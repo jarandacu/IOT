@@ -1,0 +1,52 @@
+import urllib.request
+import json 
+import time
+import matplotlib.pyplot as plt
+import datetime
+import numpy as np
+x = urllib.request.urlopen('http://things.ubidots.com/api/v1.6/devices/wemos-d1/temperature/values?token=A1E-u3jJOqxyOMbKngqjYQzHDFrluPZIl6')
+Str=x.read()
+d = json.loads(Str)
+json_size = int(len(d['results']))
+datos=[]
+fecha=[]
+dt=[]
+for i in range (0,json_size):
+	datos.append(d['results'][i]['value'])
+#	print(d['results'][i]['value'])
+	time_created=int(d['results'][i]['created_at'])
+	date = datetime.datetime.fromtimestamp(time_created / 1e3)
+	fecha.append(date)
+#	fecha.append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time_created) / 1000)))
+#	print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time_created) / 1000)))
+#	plt.plot(np.arange(0,len(datos)),datos[::-1])
+print(fecha[0	].hour)
+plt.plot(fecha[::-1],datos[::-1])
+plt.show()
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
